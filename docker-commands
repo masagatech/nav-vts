@@ -1,0 +1,7 @@
+docker-compose run --rm vts_microservice go mod init github.com/masagatech/nav-vts
+
+
+docker-compose run --rm vts_microservice air init
+
+
+docker-compose up
