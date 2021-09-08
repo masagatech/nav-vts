@@ -1,7 +1,7 @@
 servers:
   rest_server: 
     host: localhost
-    port: 7098
+    port: 3000
   tcp_server:
     host: localhost
     port: 6979

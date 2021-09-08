@@ -3,16 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/masagatech/nav-vts/app/connectors"
+	"github.com/masagatech/nav-vts/app/models"
+	"github.com/masagatech/nav-vts/app/servers"
 	"github.com/masagatech/nav-vts/app/services"
-	"github.com/streadway/amqp"
 	"github.com/xjem/t38c"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Trainer struct {
@@ -20,6 +16,8 @@ type Trainer struct {
 	Age  int
 	City string
 }
+
+var ctx = context.Background()
 
 func main() {
 	fmt.Println("test")
@@ -33,29 +31,9 @@ func main() {
 	db := connectors.NewDb(config)
 	// close the cconnection on application exit
 
-	db.Collection("testcol").InsertOne(context.Background(), bson.M{
-		"a": "b",
-	})
-
-	k, _ := db.Collection("testcol").Find(context.Background(), bson.M{})
-	var result []interface{}
-
-	k.All(context.Background(), &result)
-	fmt.Println(result)
-
 	// connect to redis
 
 	redis := connectors.NewRedis(config)
-	err := redis.Set(ctx, "key", "aaaaa", 0).Err()
-	if err != nil {
-		panic(err)
-	}
-
-	val, err := redis.Get(ctx, "key").Result()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("key", val)
 
 	// connect tile38 /// config
 
@@ -86,186 +64,184 @@ func main() {
 
 	// connect rmq /// config
 
-	rmq := connectors.NewRabbtMq(config)
-	ch, _ := rmq.Channel()
+	// rmq := connectors.NewRabbtMq(config)
+	// ch, _ := rmq.Channel()
 
-	q, _ := ch.QueueDeclare(
-		"hello", // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
-	)
+	// q, _ := ch.QueueDeclare(
+	// 	"hello", // name
+	// 	false,   // durable
+	// 	false,   // delete when unused
+	// 	false,   // exclusive
+	// 	false,   // no-wait
+	// 	nil,     // arguments
+	// )
 
-	body := "Hello World!"
-	_ = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
-		})
+	// body := "Hello World!"
+	// _ = ch.Publish(
+	// 	"",     // exchange
+	// 	q.Name, // routing key
+	// 	false,  // mandatory
+	// 	false,  // immediate
+	// 	amqp.Publishing{
+	// 		ContentType: "text/plain",
+	// 		Body:        []byte(body),
+	// 	})
 
-	// start tcp server /// config
+	rest := servers.RESTServer{
+		App: &models.App{
+			DB:    db,
+			Redis: redis,
+		},
+	}
+	rest.Start(config)
 
-	// start rest service /// config
-
-	// app := fiber.New()
-
-	// app.Get("/", func(c *fiber.Ctx) error {
-	// 	mongoTest()
-	// 	return c.SendString("Hello, World hoq the ij ij 12wwww 👋!")
-	// })
-
-	// ExampleClient()
-
-	// app.Listen(":3000")
 }
 
-var ctx = context.Background()
+// start tcp server /// config
 
-func ExampleClient() {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "vts_redis:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
+// start rest service /// config
 
-	err := rdb.Set(ctx, "key", "value", 0).Err()
-	if err != nil {
-		panic(err)
-	}
+// var ctx = context.Background()
 
-	val, err := rdb.Get(ctx, "key").Result()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("key", val)
+// func ExampleClient() {
+// 	rdb := redis.NewClient(&redis.Options{
+// 		Addr:     "vts_redis:6379",
+// 		Password: "", // no password set
+// 		DB:       0,  // use default DB
+// 	})
 
-	val2, err := rdb.Get(ctx, "key2").Result()
-	if err == redis.Nil {
-		fmt.Println("key2 does not exist")
-	} else if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("key2", val2)
-	}
-	// Output: key value
-	// key2 does not exist
-}
+// 	err := rdb.Set(ctx, "key", "value", 0).Err()
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-func mongoTest() {
-	clientOptions := options.Client().ApplyURI("mongodb://vts_mongo:27017")
-	client, err := mongo.Connect(context.TODO(), clientOptions)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	val, err := rdb.Get(ctx, "key").Result()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	fmt.Println("key", val)
 
-	// Check the connection
-	err = client.Ping(context.TODO(), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	val2, err := rdb.Get(ctx, "key2").Result()
+// 	if err == redis.Nil {
+// 		fmt.Println("key2 does not exist")
+// 	} else if err != nil {
+// 		panic(err)
+// 	} else {
+// 		fmt.Println("key2", val2)
+// 	}
+// 	// Output: key value
+// 	// key2 does not exist
+// }
 
-	fmt.Println("Connected to MongoDB!")
+// func mongoTest() {
+// 	clientOptions := options.Client().ApplyURI("mongodb://vts_mongo:27017")
+// 	client, err := mongo.Connect(context.TODO(), clientOptions)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	// Get a handle for your collection
-	collection := client.Database("test").Collection("trainers")
+// 	// Check the connection
+// 	err = client.Ping(context.TODO(), nil)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	// Some dummy data to add to the Database`
-	ash := Trainer{"Ash", 10, "Pallet Town"}
-	misty := Trainer{"Misty", 10, "Cerulean City"}
-	brock := Trainer{"Brock", 15, "Pewter City"}
+// 	fmt.Println("Connected to MongoDB!")
 
-	// Insert a single document
-	insertResult, err := collection.InsertOne(context.TODO(), ash)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
+// 	// Get a handle for your collection
+// 	collection := client.Database("test").Collection("trainers")
 
-	// Insert multiple documents
-	trainers := []interface{}{misty, brock}
+// 	// Some dummy data to add to the Database`
+// 	ash := Trainer{"Ash", 10, "Pallet Town"}
+// 	misty := Trainer{"Misty", 10, "Cerulean City"}
+// 	brock := Trainer{"Brock", 15, "Pewter City"}
 
-	insertManyResult, err := collection.InsertMany(context.TODO(), trainers)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Inserted multiple documents: ", insertManyResult.InsertedIDs)
+// 	// Insert a single document
+// 	insertResult, err := collection.InsertOne(context.TODO(), ash)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
 
-	// Update a document
-	filter := bson.D{{"name", "Ash"}}
+// 	// Insert multiple documents
+// 	trainers := []interface{}{misty, brock}
 
-	update := bson.D{
-		{"$inc", bson.D{
-			{"age", 1},
-		}},
-	}
+// 	insertManyResult, err := collection.InsertMany(context.TODO(), trainers)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Println("Inserted multiple documents: ", insertManyResult.InsertedIDs)
 
-	updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+// 	// Update a document
+// 	filter := bson.D{{"name", "Ash"}}
 
-	// Find a single document
-	var result Trainer
+// 	update := bson.D{
+// 		{"$inc", bson.D{
+// 			{"age", 1},
+// 		}},
+// 	}
 
-	err = collection.FindOne(context.TODO(), filter).Decode(&result)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
 
-	fmt.Printf("Found a single document: %+v\n", result)
+// 	// Find a single document
+// 	var result Trainer
 
-	findOptions := options.Find()
-	findOptions.SetLimit(2)
+// 	err = collection.FindOne(context.TODO(), filter).Decode(&result)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	var results []*Trainer
+// 	fmt.Printf("Found a single document: %+v\n", result)
 
-	// Finding multiple documents returns a cursor
-	cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	findOptions := options.Find()
+// 	findOptions.SetLimit(2)
 
-	// Iterate through the cursor
-	for cur.Next(context.TODO()) {
-		var elem Trainer
-		err := cur.Decode(&elem)
-		if err != nil {
-			log.Fatal(err)
-		}
+// 	var results []*Trainer
 
-		results = append(results, &elem)
-	}
+// 	// Finding multiple documents returns a cursor
+// 	cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	if err := cur.Err(); err != nil {
-		log.Fatal(err)
-	}
+// 	// Iterate through the cursor
+// 	for cur.Next(context.TODO()) {
+// 		var elem Trainer
+// 		err := cur.Decode(&elem)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
 
-	// Close the cursor once finished
-	cur.Close(context.TODO())
+// 		results = append(results, &elem)
+// 	}
 
-	fmt.Printf("Found multiple documents (array of pointers): %+v\n", results)
+// 	if err := cur.Err(); err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	// Delete all the documents in the collection
-	deleteResult, err := collection.DeleteMany(context.TODO(), bson.D{{}})
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	// Close the cursor once finished
+// 	cur.Close(context.TODO())
 
-	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
+// 	fmt.Printf("Found multiple documents (array of pointers): %+v\n", results)
 
-	// Close the connection once no longer needed
-	err = client.Disconnect(context.TODO())
+// 	// Delete all the documents in the collection
+// 	deleteResult, err := collection.DeleteMany(context.TODO(), bson.D{{}})
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		fmt.Println("Connection to MongoDB closed.")
-	}
-}
+// 	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
+
+// 	// Close the connection once no longer needed
+// 	err = client.Disconnect(context.TODO())
+
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	} else {
+// 		fmt.Println("Connection to MongoDB closed.")
+// 	}
+// }

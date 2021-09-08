@@ -1,7 +1,7 @@
 package models
 
 type Config struct {
-	Server struct {
+	Servers struct {
 		Rest_server struct {
 			Host string
 			Port int
