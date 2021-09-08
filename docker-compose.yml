@@ -5,8 +5,7 @@ services:
         container_name: vts_server
         build:
             context: .
-            dockerfile: docker/.Dockerfile
-            target: dev
+            dockerfile: ./docker/.Dockerfile
         ports:
             - 3001:3000
         environment:
@@ -25,7 +24,7 @@ services:
         image: mongo:4.4.8
         container_name: vts_mongo
         ports:
-            - "27018:27017"
+            - "27017:27017"
         restart: unless-stopped
         volumes:
             - /Users/pratiknaik/mongodb/data:/data/db
@@ -53,7 +52,7 @@ services:
         # This variant is built on Alpine Linux (it's smaller) and includes
         # the management UI.
         image: 'rabbitmq:3.9-management-alpine'
-
+        container_name: vts_rmq
         # These ports are exposed on the host; 'hostport:containerport'.
         # You could connect to this server from outside with the *host's*
         # DNS name or IP address and port 5672 (the left-hand side of the

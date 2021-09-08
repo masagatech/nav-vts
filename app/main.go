@@ -6,7 +6,10 @@ import (
 	"log"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/gofiber/fiber/v2"
+	"github.com/masagatech/nav-vts/app/connectors"
+	"github.com/masagatech/nav-vts/app/services"
+	"github.com/streadway/amqp"
+	"github.com/xjem/t38c"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,17 +22,107 @@ type Trainer struct {
 }
 
 func main() {
+	fmt.Println("test")
+	// mongoTest()
 
-	app := fiber.New()
+	// load config
+	c := services.Confiuration{}
+	config := c.LoadConfig()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		mongoTest()
-		return c.SendString("Hello, World hoq the ij ij 12wwww 👋!")
+	// connect mongo /// config
+	db := connectors.NewDb(config)
+	// close the cconnection on application exit
+
+	db.Collection("testcol").InsertOne(context.Background(), bson.M{
+		"a": "b",
 	})
 
-	ExampleClient()
+	k, _ := db.Collection("testcol").Find(context.Background(), bson.M{})
+	var result []interface{}
 
-	app.Listen(":3000")
+	k.All(context.Background(), &result)
+	fmt.Println(result)
+
+	// connect to redis
+
+	redis := connectors.NewRedis(config)
+	err := redis.Set(ctx, "key", "aaaaa", 0).Err()
+	if err != nil {
+		panic(err)
+	}
+
+	val, err := redis.Get(ctx, "key").Result()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("key", val)
+
+	// connect tile38 /// config
+
+	tile38 := connectors.NewTile38(config)
+
+	if err := tile38.Keys.Set("fleet", "truck1").Point(33.5123, -112.2693).Do(); err != nil {
+		panic(err)
+	}
+
+	if err := tile38.Keys.Set("fleet", "truck2").Point(33.4626, -112.1695).
+		// optional params
+		Field("speed", 20).
+		Expiration(20).
+		Do(); err != nil {
+		panic(err)
+	}
+
+	response, err := tile38.Search.Nearby("fleet", 33.462, -112.268, 6000).
+		Where("speed", 0, 100).
+		Match("truck*").
+		Format(t38c.FormatPoints).Do()
+	if err != nil {
+		panic(err)
+	}
+
+	// truck1 {33.5123 -112.2693}
+	fmt.Println(response.Points[0].ID, response.Points[0].Point)
+
+	// connect rmq /// config
+
+	rmq := connectors.NewRabbtMq(config)
+	ch, _ := rmq.Channel()
+
+	q, _ := ch.QueueDeclare(
+		"hello", // name
+		false,   // durable
+		false,   // delete when unused
+		false,   // exclusive
+		false,   // no-wait
+		nil,     // arguments
+	)
+
+	body := "Hello World!"
+	_ = ch.Publish(
+		"",     // exchange
+		q.Name, // routing key
+		false,  // mandatory
+		false,  // immediate
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        []byte(body),
+		})
+
+	// start tcp server /// config
+
+	// start rest service /// config
+
+	// app := fiber.New()
+
+	// app.Get("/", func(c *fiber.Ctx) error {
+	// 	mongoTest()
+	// 	return c.SendString("Hello, World hoq the ij ij 12wwww 👋!")
+	// })
+
+	// ExampleClient()
+
+	// app.Listen(":3000")
 }
 
 var ctx = context.Background()

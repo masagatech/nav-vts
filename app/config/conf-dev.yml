@@ -1,0 +1,24 @@
+servers:
+  rest_server: 
+    host: localhost
+    port: 7098
+  tcp_server:
+    host: localhost
+    port: 6979
+database:
+  host: mongo
+  port: 27017
+  user: 
+  pwd :
+  database: navvts
+redis:
+  host: vts_redis
+  port: 6379
+tile38:
+  host: vts_tile38
+  port: 9851
+rabbitmq:
+  host: vts_rmq
+  port: 5672
+  user: guest
+  pwd: guest
