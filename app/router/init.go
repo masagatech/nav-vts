@@ -15,6 +15,7 @@ func (r *Router) InitializeRouters() {
 	r.registerRouters(
 		&controller.Master_controller{},
 		&controller.Test_controller{},
+		&controller.Vehicle_controller{},
 	)
 
 }
