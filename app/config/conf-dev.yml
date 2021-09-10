@@ -3,7 +3,7 @@ servers:
     host: localhost
     port: 3000
   tcp_server:
-    host: localhost
+    host: 
     port: 6979
 database:
   host: mongo

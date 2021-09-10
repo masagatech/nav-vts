@@ -87,6 +87,21 @@ func main() {
 	// 		Body:        []byte(body),
 	// 	})
 
+	tcpServer := servers.NewTCPServer(config)
+	tcpServer.OnNewClient(func(c *servers.Client) {
+		fmt.Println(c.Conn().RemoteAddr().String())
+
+	})
+	tcpServer.OnNewMessage(func(c *servers.Client, message []byte) {
+		fmt.Println(message)
+
+	})
+	tcpServer.OnClientConnectionClosed(func(c *servers.Client, err error) {
+		fmt.Println(err)
+
+	})
+	go tcpServer.Start()
+
 	rest := servers.RESTServer{
 		App: &models.App{
 			DB:    db,
