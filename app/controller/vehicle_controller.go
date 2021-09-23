@@ -20,6 +20,7 @@ func (o *Vehicle_controller) Initr(app *models.App) {
 	// set api version group
 	d := o.App.Fiber.Group("vehicle")
 	d.Post("/", o.UpsertVehicle)
+	d.Get("/get/", o.GetVehicle)
 }
 
 func (o *Vehicle_controller) UpsertVehicle(ctx *fiber.Ctx) error {
@@ -30,4 +31,17 @@ func (o *Vehicle_controller) UpsertVehicle(ctx *fiber.Ctx) error {
 	}
 	vehicleRepository.InsertVehicle(vehicleModel)
 	return nil
+}
+
+func (o *Vehicle_controller) GetVehicle(ctx *fiber.Ctx) error {
+
+	vehicleRepository := repository.VehicleRepository{DB: o.App.DB, Ctx: ctx.Context()}
+	var vehicleModel = models.VehicleModel{}
+	// if err := ctx.BodyParser(&vehicleModel); err != nil {
+	// 	return ctx.Send([]byte(err.Error()))
+	// }
+	result := vehicleRepository.GetVehicleById(vehicleModel)
+
+	return ctx.Status(fiber.StatusOK).JSON(result)
+
 }
