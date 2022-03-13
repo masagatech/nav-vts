@@ -1,4 +1,4 @@
-FROM golang:1.14.0-stretch
+FROM golang:1.17.6-stretch
 
 RUN apt update && apt upgrade -y && \
     apt install -y git \

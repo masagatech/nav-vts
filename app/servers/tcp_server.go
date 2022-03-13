@@ -11,7 +11,7 @@ import (
 )
 
 // Server ...
-type server struct {
+type Server struct {
 	host                     string
 	port                     string
 	onNewClientCallback      func(c *Client)
@@ -22,11 +22,11 @@ type server struct {
 // Client ...
 type Client struct {
 	conn   net.Conn
-	server *server
+	Server *Server
 }
 
-func NewTCPServer(config *models.Config) *server {
-	s := &server{
+func NewTCPServer(config *models.Config) *Server {
+	s := &Server{
 		host: config.Servers.Tcp_server.Host,
 		port: strconv.Itoa(config.Servers.Tcp_server.Port),
 	}
@@ -36,29 +36,29 @@ func NewTCPServer(config *models.Config) *server {
 	return s
 }
 
-// Called right after server starts listening new client
-func (s *server) OnNewClient(callback func(c *Client)) {
+// Called right after Server starts listening new client
+func (s *Server) OnNewClient(callback func(c *Client)) {
 	s.onNewClientCallback = callback
 }
 
 // Called right after connection closed
-func (s *server) OnClientConnectionClosed(callback func(c *Client, err error)) {
+func (s *Server) OnClientConnectionClosed(callback func(c *Client, err error)) {
 	s.onClientConnectionClosed = callback
 }
 
 // Called when Client receives new message
-func (s *server) OnNewMessage(callback func(c *Client, message []byte)) {
+func (s *Server) OnNewMessage(callback func(c *Client, message []byte)) {
 	s.onNewMessage = callback
 }
 
 // Run ...
-func (s *server) Start() {
+func (s *Server) Start() {
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", s.host, s.port))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer listener.Close()
-	fmt.Println("Tcp server started", fmt.Sprintf("%s:%s", s.host, s.port))
+	fmt.Println("Tcp Server started", fmt.Sprintf("%s:%s", s.host, s.port))
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -67,7 +67,7 @@ func (s *server) Start() {
 
 		client := &Client{
 			conn:   conn,
-			server: s,
+			Server: s,
 		}
 		fmt.Println("New Client")
 		go client.handleRequest()
@@ -103,10 +103,10 @@ func (c *Client) handleRequest() {
 		if err != nil {
 			//if file/socket is closed remove the socket from list.
 			if io.EOF == err {
-				fmt.Printf("connection closed ip address:%s\n", c.conn.RemoteAddr().String())
+
 				//this.removeClient(connection)
 				c.conn.Close()
-				c.server.onClientConnectionClosed(c, err)
+				c.Server.onClientConnectionClosed(c, err)
 				break
 			} else {
 				//fmt.Println(err)
@@ -123,7 +123,7 @@ func (c *Client) handleRequest() {
 
 				//protocalHandler.ParseData(buf, n, connection)
 				//connection.Write([]byte(data + "\n"))
-				c.server.onNewMessage(c, buf)
+				c.Server.onNewMessage(c, buf)
 			}
 		}
 		//fmt.Printf("Message incoming: %s", string(message))

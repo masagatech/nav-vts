@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/masagatech/nav-vts/app/connectors"
+	"github.com/masagatech/nav-vts/app/handlers"
 	"github.com/masagatech/nav-vts/app/models"
+	"github.com/masagatech/nav-vts/app/queue"
 	"github.com/masagatech/nav-vts/app/servers"
 	"github.com/masagatech/nav-vts/app/services"
-	"github.com/xjem/t38c"
 )
 
 type Trainer struct {
@@ -32,74 +33,16 @@ func main() {
 	// close the cconnection on application exit
 
 	// connect to redis
-
 	redis := connectors.NewRedis(config)
 
-	// connect tile38 /// config
-
-	tile38 := connectors.NewTile38(config)
-
-	if err := tile38.Keys.Set("fleet", "truck1").Point(33.5123, -112.2693).Do(); err != nil {
-		panic(err)
-	}
-
-	if err := tile38.Keys.Set("fleet", "truck2").Point(33.4626, -112.1695).
-		// optional params
-		Field("speed", 20).
-		Expiration(20).
-		Do(); err != nil {
-		panic(err)
-	}
-
-	response, err := tile38.Search.Nearby("fleet", 33.462, -112.268, 6000).
-		Where("speed", 0, 100).
-		Match("truck*").
-		Format(t38c.FormatPoints).Do()
-	if err != nil {
-		panic(err)
-	}
-
-	// truck1 {33.5123 -112.2693}
-	fmt.Println(response.Points[0].ID, response.Points[0].Point)
-
 	// connect rmq /// config
-
-	// rmq := connectors.NewRabbtMq(config)
-	// ch, _ := rmq.Channel()
-
-	// q, _ := ch.QueueDeclare(
-	// 	"hello", // name
-	// 	false,   // durable
-	// 	false,   // delete when unused
-	// 	false,   // exclusive
-	// 	false,   // no-wait
-	// 	nil,     // arguments
-	// )
-
-	// body := "Hello World!"
-	// _ = ch.Publish(
-	// 	"",     // exchange
-	// 	q.Name, // routing key
-	// 	false,  // mandatory
-	// 	false,  // immediate
-	// 	amqp.Publishing{
-	// 		ContentType: "text/plain",
-	// 		Body:        []byte(body),
-	// 	})
+	rmqClient := connectors.NewRabbtMq(config)
+	rmq := queue.New(rmqClient)
+	rmq.Listner("", "test")
 
 	tcpServer := servers.NewTCPServer(config)
-	tcpServer.OnNewClient(func(c *servers.Client) {
-		fmt.Println(c.Conn().RemoteAddr().String())
+	handlers.NewInit(tcpServer, rmq)
 
-	})
-	tcpServer.OnNewMessage(func(c *servers.Client, message []byte) {
-		fmt.Println(message)
-
-	})
-	tcpServer.OnClientConnectionClosed(func(c *servers.Client, err error) {
-		fmt.Println(err)
-
-	})
 	go tcpServer.Start()
 
 	rest := servers.RESTServer{
@@ -112,6 +55,32 @@ func main() {
 
 }
 
+// connect tile38 /// config
+
+// tile38 := connectors.NewTile38(config)
+
+// if err := tile38.Keys.Set("fleet", "truck1").Point(33.5123, -112.2693).Do(); err != nil {
+// 	panic(err)
+// }
+
+// if err := tile38.Keys.Set("fleet", "truck2").Point(33.4626, -112.1695).
+// 	// optional params
+// 	Field("speed", 20).
+// 	Expiration(20).
+// 	Do(); err != nil {
+// 	panic(err)
+// }
+
+// response, err := tile38.Search.Nearby("fleet", 33.462, -112.268, 6000).
+// 	Where("speed", 0, 100).
+// 	Match("truck*").
+// 	Format(t38c.FormatPoints).Do()
+// if err != nil {
+// 	panic(err)
+// }
+
+// // truck1 {33.5123 -112.2693}
+// fmt.Println(response.Points[0].ID, response.Points[0].Point)
 // start tcp server /// config
 
 // start rest service /// config
